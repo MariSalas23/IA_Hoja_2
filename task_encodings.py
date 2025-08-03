@@ -93,8 +93,8 @@ def get_tree_search_for_jobshop(jobshop):
 
     def decoder(node): # Function to decode final node into job-machine assignments.
         if node is None:
-            return [0] * len(d)  # asigna todos los trabajos a máquina 0
-        return [node[i] for i in range(len(d))]
+            return {i: 0 for i in range(len(d))} 
+        return {i: node[i] for i in range(len(d))}  
 
     search = encode_problem(domains, constraints, better, order="bfs") # Search object for solving the job shop.
 
