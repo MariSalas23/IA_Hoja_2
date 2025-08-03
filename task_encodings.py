@@ -46,15 +46,14 @@ def get_tree_search_for_sudoku(sudoku):
         return True
 
     def decoder(node):  # Function to decode final node to 9x9 board.
-        if node is None:
-            return None 
-
         board = sudoku.copy()
+        if node is None:
+            return board  # Devuelve el original si no encontró solución
         for (i, j), val in node.items():
             board[i, j] = val
         return board
 
-    search = encode_problem(domains, constraints, order="bfs") # Search object for solving the Sudoku.
+    search = encode_problem(domains, constraints, order="dfs") # Search object for solving the Sudoku.
 
     return search, decoder # Tupla con PathlessTreeSearch y decoder
 
@@ -93,7 +92,9 @@ def get_tree_search_for_jobshop(jobshop):
         return makespan(solution_1) < makespan(solution_2)
 
     def decoder(node): # Function to decode final node into job-machine assignments.
-        return [node[i] for i in range(n)]
+        if node is None:
+            return [0] * len(d)  # asigna todos los trabajos a máquina 0
+        return [node[i] for i in range(len(d))]
 
     search = encode_problem(domains, constraints, better, order="bfs") # Search object for solving the job shop.
 
