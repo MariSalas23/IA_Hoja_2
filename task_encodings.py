@@ -57,7 +57,7 @@ def get_tree_search_for_sudoku(sudoku):
 
     return search, decoder # Tupla con PathlessTreeSearch y decoder
 
-def get_tree_search_for_jobshop(jobshop):
+def get_tree_search_for_jobshop(jobshop, max_makespan=18):
     """
     Encodes a Job Shop Scheduling problem as a tree search.
 
@@ -65,38 +65,42 @@ def get_tree_search_for_jobshop(jobshop):
         jobshop (tuple): A tuple (m, d) where:
             - m (int): Number of machines.
             - d (list): List of job durations.
+        max_makespan (int): Optional maximum allowed makespan for pruning.
 
     Returns:
         tuple: (PathlessTreeSearch, decoder)
             - search: Search object for solving the job shop.
             - decoder: Function to decode final node into job-machine assignments.
     """
-    m, d = jobshop # A tuple (m, d) = (number machines, list of jobs durations)
-    n = len(d) # Número total de trabajos
-    variables = list(range(n)) # Cada trabajo es una variable
-    domains = {}
-    for var in variables:
-        domains[var] = list(range(m))
+    m, d = jobshop  # A tuple (m, d) = (number machines, list of jobs durations)
+    n = len(d)  # Número total de trabajos
+    variables = list(range(n))  # Cada trabajo es una variable
+    domains = {var: list(range(m)) for var in variables}  # Cada trabajo puede ir a cualquier máquina
+
+    def partial_makespan(assign):  # Tiempo acumulado por máquina hasta el momento
+        times = [0] * m
+        for job, machine in assign.items():
+            times[machine] += d[job]
+        return max(times)
 
     def constraints(partial):
-        # Cualquier asignación de máquina es válida
-        return True
+        # Poda temprana si el makespan parcial ya supera el máximo permitido
+        return partial_makespan(partial) <= max_makespan
 
-    def better(solution_1, solution_2): # Comparar las soluciones
-        def makespan(assign):
-            times = [0] * m # Tiempo acumulado de cada máquina
-            for job, machine in assign.items():
-                times[machine] += d[job]
-            return max(times)
-        
-        return makespan(solution_1) < makespan(solution_2)
+    def better(solution_1, solution_2):
+        # Solo compara soluciones completas
+        if len(solution_1) < n:
+            return False
+        if len(solution_2) < n:
+            return True
+        return partial_makespan(solution_1) < partial_makespan(solution_2)
 
-    def decoder(node): # Function to decode final node into job-machine assignments.
+    def decoder(node):  # Function to decode final node into job-machine assignments.
         if node is None:
-            return {i: 0 for i in range(len(d))} 
-        return {i: node[i] for i in range(len(d))}  
+            return {i: 0 for i in range(n)}  # Asigna por defecto todos a máquina 0
+        return {i: node[i] for i in range(n)}
 
-    search = encode_problem(domains, constraints, better, order="bfs") # Search object for solving the job shop.
+    search = encode_problem(domains, constraints, better, order="dfs")  # DFS es más profundo y poda antes
 
     return search, decoder  # Tupla con PathlessTreeSearch y decoder
 
