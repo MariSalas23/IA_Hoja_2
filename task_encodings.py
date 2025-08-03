@@ -57,7 +57,7 @@ def get_tree_search_for_sudoku(sudoku):
 
     return search, decoder # Tupla con PathlessTreeSearch y decoder
 
-def get_tree_search_for_jobshop(jobshop, max_makespan=18):
+def get_tree_search_for_jobshop(jobshop, max_makespan=22):
     """
     Encodes a Job Shop Scheduling problem as a tree search.
 
@@ -84,7 +84,9 @@ def get_tree_search_for_jobshop(jobshop, max_makespan=18):
         return max(times)
 
     def constraints(partial):
-        # Poda temprana si el makespan parcial ya supera el máximo permitido
+        # Poda híbrida: se permite explorar más al principio
+        if len(partial) < n // 2:  # Si no ha asignado al menos la mitad de trabajos
+            return True
         return partial_makespan(partial) <= max_makespan
 
     def better(solution_1, solution_2):
@@ -100,7 +102,7 @@ def get_tree_search_for_jobshop(jobshop, max_makespan=18):
             return {i: 0 for i in range(n)}  # Asigna por defecto todos a máquina 0
         return {i: node[i] for i in range(n)}
 
-    search = encode_problem(domains, constraints, better, order="dfs")  # DFS es más profundo y poda antes
+    search = encode_problem(domains, constraints, better, order="dfs")  # DFS profundiza más rápido
 
     return search, decoder  # Tupla con PathlessTreeSearch y decoder
 
