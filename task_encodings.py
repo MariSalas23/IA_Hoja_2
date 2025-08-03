@@ -21,10 +21,15 @@ def get_tree_search_for_sudoku(sudoku):
                 variables.append((i, j))
 
     domains = {} # Para cada posición, el dominio es de 1 a 9 (valores del sudoku)
-    for var in variables:
-        domains[var] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    for (i, j) in variables:
+        used_in_row = set(sudoku[i, :])
+        used_in_col = set(sudoku[:, j])
+        block_i, block_j = 3 * (i // 3), 3 * (j // 3)
+        used_in_block = set(sudoku[block_i:block_i+3, block_j:block_j+3].flatten())
+        used = used_in_row.union(used_in_col).union(used_in_block)
+        domains[(i, j)] = [val for val in range(1, 10) if val not in used]
 
-    def verification(partial): # Verifica si es movimiento valido
+    def constraints(partial): # Verifica si es movimiento valido
         board = sudoku.copy() # Copia del tablero
         for (i, j), val in partial.items(): # Asignar los valores
             board[i, j] = val
@@ -40,13 +45,16 @@ def get_tree_search_for_sudoku(sudoku):
                 return False
         return True
 
-    def decoder(node): # Function to decode final node to 9x9 board.
+    def decoder(node):  # Function to decode final node to 9x9 board.
+        if node is None:
+            return None 
+
         board = sudoku.copy()
         for (i, j), val in node.items():
             board[i, j] = val
         return board
 
-    search = encode_problem(domains, verification) # Search object for solving the Sudoku.
+    search = encode_problem(domains, constraints, order="bfs") # Search object for solving the Sudoku.
 
     return search, decoder # Tupla con PathlessTreeSearch y decoder
 
@@ -71,7 +79,7 @@ def get_tree_search_for_jobshop(jobshop):
     for var in variables:
         domains[var] = list(range(m))
 
-    def verification(partial):
+    def constraints(partial):
         # Cualquier asignación de máquina es válida
         return True
 
@@ -87,7 +95,7 @@ def get_tree_search_for_jobshop(jobshop):
     def decoder(node): # Function to decode final node into job-machine assignments.
         return [node[i] for i in range(n)]
 
-    search = encode_problem(domains, verification, better) # Search object for solving the job shop.
+    search = encode_problem(domains, constraints, better, order="bfs") # Search object for solving the job shop.
 
     return search, decoder  # Tupla con PathlessTreeSearch y decoder
 
@@ -104,34 +112,40 @@ def get_tree_search_for_connect_4(opponent):
             - decoder: Function to extract yellow player’s move sequence.
     """
 
-    s0 = ConnectState()  # Estado inicial
-
-    first_red_move = opponent(s0) # Primer movimiento
-    s0 = s0.transition(first_red_move)
+    initial = ConnectState() # Estado inicial
+    first_red_move = opponent(initial)
+    first_state = initial.transition(first_red_move)
+    s0 = (first_state, [])
 
     def goal(state): # Jugador amarillo gana
-        return state.is_final() and state.get_winner() ==  1  # Amarillo es 1
+        game_state, _ = state
+
+        return game_state.is_final() and game_state.get_winner() == 1 # Amarillo es 1
 
     def succ(state):
-        if state.is_final(): # Si el estado es final o el tablero está lleno
+        game_state, yellow_moves = state
+
+        if game_state.is_final(): # Si el estado es final o el tablero está lleno
             return []
 
         children = []
-        for yellow_move in state.get_free_cols():  # Columnas disponibles
-            yellow_state = state.transition(yellow_move)  # Movimiento del jugador amarillo
+        for yellow_move in game_state.get_free_cols():  # Columnas disponibles
+            yellow_state = game_state.transition(yellow_move)  # Movimiento del jugador amarillo
+            updated_moves = yellow_moves + [yellow_move]
 
             if yellow_state.is_final():
-                children.append(yellow_state)
+                children.append((yellow_state, updated_moves))
             else:
                 red_move = opponent(yellow_state) # Movimiento del jugador rojo 
                 red_state = yellow_state.transition(red_move)
-                children.append(red_state)
+                children.append((red_state, updated_moves))
 
         return children
 
     def decoder(state): 
         # Function to extract yellow player’s move sequence
-        return state.get_sequence(player = 1)
+        _, yellow_moves = state
+        return yellow_moves
 
     search = PathlessTreeSearch(n0=s0, succ=succ, goal=goal, order="dfs")  #  Search object to solve the game.
 

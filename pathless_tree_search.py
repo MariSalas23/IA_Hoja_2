@@ -66,7 +66,7 @@ class PathlessTreeSearch:
 
         return self._best # Returns the best node found so far, the current best solution.
 
-def encode_problem(domains, constraints, better=None):
+def encode_problem(domains, constraints, better=None, order="bfs"):
     """
     Encodes a fixed-variable search problem as a tree search.
 
@@ -98,4 +98,4 @@ def encode_problem(domains, constraints, better=None):
     def goal(node):
         return len(node) == len(variables) # Si el tamaño de ambas es igual no hay más hijos
 
-    return PathlessTreeSearch(n0={}, succ=succ, goal=goal, better=better) # Returns configured search object.
+    return PathlessTreeSearch(n0={}, succ=succ, goal=goal, better=better, order=order) # Returns configured search object.
